@@ -1,0 +1,6 @@
+body { font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4; padding: 20px; }
+.container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+h2 { color: #a50044; border-bottom: 2px solid #004d98; padding-bottom: 5px; }
+#chat-window { height: 200px; overflow-y: scroll; background: #eee; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+input { width: 75%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+button { padding: 10px; background: #004d98; color: white; border: none; border-radius: 5px; cursor: pointer; }
