@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barça Dashboard & AI Assistant</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
     <div class="container">
@@ -22,12 +23,12 @@
         <hr>
 
         <section id="ai-assistant">
-            <h2>AI Assistant (GPT-4)</h2>
-            <div id="chat-window">
-                <p><strong>AI:</strong> Hello! Ask me anything.</p>
+            <h2>AI Assistant (GPT Powered)</h2>
+            <div id="chat-window" style="height: 250px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9; border-radius: 5px;">
+                <p><strong>AI:</strong> Hello! It's April 2026. Ask me anything about Barça or your schedule.</p>
             </div>
             <div class="input-area" style="display: flex; gap: 10px; margin-top: 10px;">
-                <input type="text" id="user-input" style="flex-grow: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc;" placeholder="Can I watch the next game?">
+                <input type="text" id="user-input" style="flex-grow: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc;" placeholder="Will Barça win the league this year?">
                 <button onclick="askAI()" style="padding: 10px 20px; background: #004d98; color: white; border: none; border-radius: 5px; cursor: pointer;">Ask AI</button>
             </div>
         </section>
@@ -38,4 +39,4 @@
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 </body>
-</html> 
+</html>
