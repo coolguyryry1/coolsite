@@ -3,54 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>coolsite</title>
+    <title>The Hub | Home</title>
     
-    <link rel="icon" type="image/png" href="images.png">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='0' y='0' width='45' height='45' rx='5' fill='%234A90E2'/><rect x='55' y='0' width='45' height='45' rx='5' fill='%2363B3ED'/><rect x='0' y='55' width='45' height='45' rx='5' fill='%232D3748'/><rect x='55' y='55' width='45' height='45' rx='5' fill='%23ED64A6'/></svg>">
 
     <link rel="stylesheet" href="style.css">
-    
     <script src="https://js.puter.com/v2/"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="container">
-        <section id="barca-widget">
-            <h2>stuffs</h2>
-            <div id="widget-6edamnzlaqzm" class="scoreaxis-widget" style="width: auto; height: auto; font-size: 14px; background-color: #ffffff; color: #141416; border: 1px solid; border-color: #ecf1f7; overflow: auto;">
-                <script src="https://widgets.scoreaxis.com/api/football/team-info/62321b15adaf4b2bd73de814?widgetId=6edamnzlaqzm&lang=en&statsBlock=1&playersBlock=1&matchesBlock=1&links=1&font=heebo&fontSize=14&rowDensity=100&widgetWidth=auto&widgetHeight=auto&bodyColor=%23ffffff&textColor=%23141416&linkColor=%23141416&borderColor=%23ecf1f7&tabColor=%23f3f8fd" async></script>
-                <div class="widget-main-link" style="padding: 6px 12px; font-weight: 500;">
-                    Live data by <a href="https://www.scoreaxis.com/" style="color: inherit;">Scoreaxis</a>
+        <header>
+            <h1>The Hub</h1>
+        </header>
+
+        <section class="card">
+            <h2>Barça Updates</h2>
+            <div id="widget-6edamnzlaqzm" class="scoreaxis-widget">
+                <script src="https://widgets.scoreaxis.com/api/football/team-info/62321b15adaf4b2bd73de814?widgetId=6edamnzlaqzm&lang=en&statsBlock=1&playersBlock=1&matchesBlock=1&links=1&font=heebo&fontSize=14" async></script>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Doodle Jump</h2>
+            <div class="game-box">
+                <canvas id="jumpGame" width="300" height="500"></canvas>
+                <div class="controls">
+                    <p>Score: <span id="jumpScore">0</span></p>
+                    <button onclick="initJumpGame()" class="btn">Start Game</button>
                 </div>
             </div>
         </section>
 
-        <hr>
-
-        <section id="calendar-hub">
-            <h2>Your Schedule</h2>
-            <div id="g_id_onload"
-                 data-client_id="395838452484-29r7mrhrb50og9elibotn4e3051fmi03.apps.googleusercontent.com"
-                 data-callback="handleCredentialResponse"
-                 data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin" data-type="standard"></div>
-
-            <div id="calendar-container" style="display:none; margin-top: 20px;">
-                <p>Logged in as: <span id="user-email" style="font-weight:bold;"></span></p>
-                <iframe id="google-calendar-iframe" src="" style="border: 0" width="100%" height="400" frameborder="0" scrolling="no"></iframe>
-            </div>
-        </section>
-
-        <hr>
-
-        <section id="ai-assistant">
-            <h2>AI Assistant (GPT Powered)</h2>
-            <div id="chat-window" style="height: 250px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9; border-radius: 5px;">
-                <p><strong>AI:</strong> Hello! Ask me anything.</p>
-            </div>
-            <div class="input-area" style="display: flex; gap: 10px; margin-top: 10px;">
-                <input type="text" id="user-input" style="flex-grow: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc;" placeholder="Will Barça win the league this year?">
-                <button onclick="askAI()" style="padding: 10px 20px; background: #004d98; color: white; border: none; border-radius: 5px; cursor: pointer;">Ask AI</button>
+        <section class="card">
+            <h2>AI Assistant</h2>
+            <div id="chat-window" class="chat"></div>
+            <div class="input-group">
+                <input type="text" id="user-input" placeholder="Ask anything...">
+                <button onclick="askAI()" class="btn">Send</button>
             </div>
         </section>
     </div>
