@@ -10,11 +10,19 @@ function showTab(tabId) {
     });
 
     // Show the selected tab
-    document.getElementById(tabId).classList.add('active');
+    const activeTab = document.getElementById(tabId);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
 
     // Add active class to the clicked button
-    event.currentTarget.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
     
+    // WAKE UP THE WIDGET: This forces the browser to recalculate layouts
+    window.dispatchEvent(new Event('resize'));
+
     // Stop the game if we leave the game tab
     if (tabId !== 'game') {
         isPlaying = false;
