@@ -1,13 +1,14 @@
 // Global variables
 let bestScore = 0;
 let playerName = ""; 
+let moveLeft = false;
+let moveRight = false;
 
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     const activeTab = document.getElementById(tabId);
     if (activeTab) activeTab.classList.add('active');
-    if (event && event.currentTarget) event.currentTarget.classList.add('active');
     
     setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
 
@@ -17,7 +18,7 @@ function showTab(tabId) {
     }
 }
 
-// --- 1. Google Login & Calendar (Unchanged) ---
+// --- 1. Google Login & Calendar ---
 function handleCredentialResponse(response) {
     const payload = JSON.parse(atob(response.credential.split('.')[1]));
     const email = payload.email;
@@ -28,7 +29,7 @@ function handleCredentialResponse(response) {
     document.querySelector('.g_id_signin').style.display = 'none';
 }
 
-// --- 2. AI Implementation (Unchanged) ---
+// --- 2. AI Implementation ---
 async function askAI() {
     const userInput = document.getElementById('user-input').value;
     const chatWindow = document.getElementById('chat-window');
@@ -90,15 +91,43 @@ function drawPlayer() {
     ctx.restore();
 }
 
-// --- 4. Robust Leaderboard Handler ---
+// --- 4. Mobile Touch Listeners ---
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.touches[0].clientX - rect.left;
+    const touchY = e.touches[0].clientY - rect.top;
+
+    if (!isPlaying) {
+        // Tap to restart check
+        if (touchX > 80 && touchX < 220 && touchY > 330 && touchY < 375) initJumpGame();
+        return;
+    }
+
+    // Steering
+    if (touchX < canvas.width / 2) moveLeft = true;
+    else moveRight = true;
+
+    // Shooting
+    if (canShoot) {
+        shoot();
+        canShoot = false;
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    moveLeft = false;
+    moveRight = false;
+    canShoot = true;
+}, { passive: false });
+
+// --- 5. Leaderboard ---
 async function handleLeaderboard(finalScore) {
     let scores = [];
     try {
-        // Try Puter Global Storage
         let rawData = await puter.kv.get('global_leaderboard');
         scores = rawData ? JSON.parse(rawData) : [];
     } catch (e) {
-        console.warn("Puter KV failed, using local fallback.");
         let localData = localStorage.getItem('local_leaderboard');
         scores = localData ? JSON.parse(localData) : [];
     }
@@ -107,39 +136,30 @@ async function handleLeaderboard(finalScore) {
 
     if (qualifies && finalScore > 0) {
         if (!playerName) {
-            playerName = window.prompt("New High Score! Enter your name:", "Player") || "Anonymous";
+            playerName = window.prompt("New High Score! Name:", "Player") || "Anonymous";
         }
         scores.push({ name: playerName.substring(0, 10), score: finalScore });
         scores.sort((a, b) => b.score - a.score);
         scores = scores.slice(0, 5);
-        
-        // Save to Puter and Local as backup
         try { await puter.kv.set('global_leaderboard', JSON.stringify(scores)); } catch(e){}
         localStorage.setItem('local_leaderboard', JSON.stringify(scores));
     }
     return scores;
 }
 
-// Draw helper to keep gameOver clean
 function drawGameOverScreen(leaderboardData) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.font = "bold 28px Arial";
     ctx.fillText("GAME OVER", canvas.width / 2, 70);
-    
     ctx.font = "20px Arial";
     ctx.fillText("Score: " + score, canvas.width / 2, 105);
-
     ctx.fillStyle = "#f6e05e";
-    ctx.font = "bold 18px Arial";
     ctx.fillText("--- TOP 5 ---", canvas.width / 2, 150);
-    
     ctx.fillStyle = "white";
     ctx.font = "16px Courier New";
-    
     if (Array.isArray(leaderboardData)) {
         leaderboardData.forEach((s, i) => {
             ctx.fillText(`${i + 1}. ${s.name}: ${s.score}`, canvas.width / 2, 190 + (i * 25));
@@ -147,15 +167,12 @@ function drawGameOverScreen(leaderboardData) {
     } else {
         ctx.fillText(leaderboardData, canvas.width / 2, 190);
     }
-
     ctx.fillStyle = "#4A90E2";
     if (ctx.roundRect) {
         ctx.beginPath();
         ctx.roundRect(canvas.width / 2 - 70, 330, 140, 45, 10);
         ctx.fill();
-    } else {
-        ctx.fillRect(canvas.width / 2 - 70, 330, 140, 45);
-    }
+    } else { ctx.fillRect(canvas.width / 2 - 70, 330, 140, 45); }
     ctx.fillStyle = "white";
     ctx.fillText("PLAY AGAIN", canvas.width / 2, 358);
 }
@@ -164,17 +181,11 @@ async function gameOver() {
     isPlaying = false;
     if (anim) cancelAnimationFrame(anim);
     if (score > bestScore) bestScore = score;
-
-    // Show loading state while waiting for Puter
     drawGameOverScreen("Loading...");
-
     const topScores = await handleLeaderboard(score);
-    
-    // Redraw with actual scores
     drawGameOverScreen(topScores);
 }
 
-// --- Game Logic (Unchanged but ensuring it calls correct gameOver) ---
 function initJumpGame() {
     if (!canvas) return;
     score = 0; player.x = 135; player.y = 400; player.dy = 0;
@@ -200,8 +211,9 @@ function gameLoop() {
     if (!isPlaying) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (keys['ArrowLeft'] || keys['KeyA']) { player.x -= 7; player.facing = 'left'; }
-    if (keys['ArrowRight'] || keys['KeyD']) { player.x += 7; player.facing = 'right'; }
+    // Movement Logic (Keyboard + Mobile)
+    if (keys['ArrowLeft'] || keys['KeyA'] || moveLeft) { player.x -= 7; player.facing = 'left'; }
+    if (keys['ArrowRight'] || keys['KeyD'] || moveRight) { player.x += 7; player.facing = 'right'; }
 
     player.dy += player.grav;
     player.y += player.dy;
@@ -229,8 +241,7 @@ function gameLoop() {
         bb.y += 4; 
         ctx.fillStyle = "#f6e05e";
         ctx.fillRect(bb.x, bb.y, bb.w, bb.h);
-        if (bb.x < player.x + player.w && bb.x + bb.w > player.x &&
-            bb.y < player.y + player.h && bb.y + bb.h > player.y) {
+        if (bb.x < player.x + player.w && bb.x + bb.w > player.x && bb.y < player.y + player.h && bb.y + bb.h > player.y) {
             gameOver();
         }
         if (bb.y > canvas.height) bossBullets.splice(i, 1);
@@ -258,26 +269,20 @@ function gameLoop() {
         document.getElementById('jumpScore').innerText = score;
     }
 
-    let bodyWidth = player.w * 0.67; 
-    let trunkWidth = player.w - bodyWidth;
-    let hitboxX = (player.facing === 'right') ? player.x : player.x + trunkWidth;
-
     platforms.forEach(p => {
         ctx.fillStyle = "#48bb78";
         ctx.beginPath();
-        if (ctx.roundRect) { ctx.roundRect(p.x, p.y, p.w, p.h, 6); } 
-        else { ctx.fillRect(p.x, p.y, p.w, p.h); }
+        if (ctx.roundRect) ctx.roundRect(p.x, p.y, p.w, p.h, 6);
+        else ctx.fillRect(p.x, p.y, p.w, p.h);
         ctx.fill();
 
-        if (p.type === 'spring') { 
-            ctx.fillStyle = "#a0aec0"; ctx.fillRect(p.x + 15, p.y - 8, 20, 8); 
-        }
+        if (p.type === 'spring') { ctx.fillStyle = "#a0aec0"; ctx.fillRect(p.x + 15, p.y - 8, 20, 8); }
         if (p.rocket) {
             ctx.fillStyle = "#ed8936"; ctx.fillRect(p.x + 20, p.y - 15, 10, 15);
             ctx.fillStyle = "#f6e05e"; ctx.fillRect(p.x + 22, p.y - 5, 6, 5);
         }
         
-        if (player.dy > 0 && hitboxX < p.x + p.w && hitboxX + bodyWidth > p.x && 
+        if (player.dy > 0 && player.x < p.x + p.w && player.x + player.w > p.x && 
             player.y + player.h > p.y && player.y + player.h < p.y + p.h + 10) {
             if (p.rocket) { player.dy = -50; p.rocket = false; }
             else if (p.type === 'spring') { player.dy = -30; }
