@@ -1,5 +1,6 @@
-// Global Best Score variable
+// Global variables
 let bestScore = 0;
+let playerName = ""; // Session storage for name
 
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -89,6 +90,80 @@ function drawPlayer() {
     ctx.restore();
 }
 
+// --- 4. NEW: Leaderboard Handler ---
+async function handleLeaderboard(finalScore) {
+    try {
+        let rawData = await puter.kv.get('global_leaderboard');
+        let scores = rawData ? JSON.parse(rawData) : [];
+
+        // Qualify for leaderboard?
+        const qualifies = scores.length < 5 || finalScore > scores[scores.length - 1].score;
+
+        if (qualifies) {
+            if (!playerName) {
+                playerName = window.prompt("New High Score! Enter your name:", "Player") || "Anonymous";
+            }
+            scores.push({ name: playerName.substring(0, 10), score: finalScore });
+            scores.sort((a, b) => b.score - a.score);
+            scores = scores.slice(0, 5); // Keep top 5
+            await puter.kv.set('global_leaderboard', JSON.stringify(scores));
+        }
+        return scores;
+    } catch (e) {
+        console.error("Leaderboard error", e);
+        return [];
+    }
+}
+
+async function gameOver() {
+    isPlaying = false;
+    if (anim) cancelAnimationFrame(anim);
+    if (score > bestScore) bestScore = score;
+
+    // Menu Overlay
+    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.font = "bold 28px Arial";
+    ctx.fillText("GAME OVER", canvas.width / 2, 70);
+    
+    ctx.font = "20px Arial";
+    ctx.fillText("Your Score: " + score, canvas.width / 2, 105);
+
+    // Leaderboard Display
+    ctx.fillStyle = "#f6e05e";
+    ctx.font = "bold 18px Arial";
+    ctx.fillText("--- GLOBAL TOP 5 ---", canvas.width / 2, 150);
+    
+    ctx.fillStyle = "white";
+    ctx.font = "16px Courier New";
+    
+    const topScores = await handleLeaderboard(score);
+    if (topScores.length === 0) {
+        ctx.fillText("Loading...", canvas.width / 2, 190);
+    } else {
+        topScores.forEach((s, i) => {
+            ctx.fillText(`${i + 1}. ${s.name}: ${s.score}`, canvas.width / 2, 190 + (i * 25));
+        });
+    }
+
+    // Play Again Button (shifted lower for leaderboard room)
+    ctx.fillStyle = "#4A90E2";
+    if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(canvas.width / 2 - 70, 330, 140, 45, 10);
+        ctx.fill();
+    } else {
+        ctx.fillRect(canvas.width / 2 - 70, 330, 140, 45);
+    }
+    
+    ctx.fillStyle = "white";
+    ctx.font = "bold 16px Arial";
+    ctx.fillText("PLAY AGAIN", canvas.width / 2, 358);
+}
+
 function initJumpGame() {
     if (!canvas) return;
     score = 0; player.x = 135; player.y = 400; player.dy = 0;
@@ -102,46 +177,13 @@ function initJumpGame() {
     gameLoop();
 }
 
-function gameOver() {
-    isPlaying = false;
-    if (anim) cancelAnimationFrame(anim);
-    if (score > bestScore) bestScore = score;
-
-    // Menu Overlay
-    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.font = "bold 32px Arial";
-    ctx.fillText("GAME OVER", canvas.width / 2, 180);
-    
-    ctx.font = "20px Arial";
-    ctx.fillText("Score: " + score, canvas.width / 2, 225);
-    ctx.fillText("Best: " + bestScore, canvas.width / 2, 255);
-
-    // Play Again Button
-    ctx.fillStyle = "#4A90E2";
-    if (ctx.roundRect) {
-        ctx.beginPath();
-        ctx.roundRect(canvas.width / 2 - 70, 300, 140, 45, 10);
-        ctx.fill();
-    } else {
-        ctx.fillRect(canvas.width / 2 - 70, 300, 140, 45);
-    }
-    
-    ctx.fillStyle = "white";
-    ctx.font = "bold 18px Arial";
-    ctx.fillText("PLAY AGAIN", canvas.width / 2, 329);
-}
-
-// Click listener for Play Again button
+// Updated click listener for the new button position
 canvas.addEventListener('mousedown', (e) => {
     if (isPlaying) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (x > 80 && x < 220 && y > 300 && y < 345) {
+    if (x > 80 && x < 220 && y > 330 && y < 375) {
         initJumpGame();
     }
 });
@@ -206,7 +248,6 @@ function gameLoop() {
             if (p.y > canvas.height) { Object.assign(p, generatePlatform(0)); score += 10; }
         });
         document.getElementById('jumpScore').innerText = score;
-        // Boss and Boss Bullets are NOT offset, keeping them locked to current screen Y
     }
 
     let bodyWidth = player.w * 0.67; 
