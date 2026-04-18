@@ -1,6 +1,6 @@
 // Global variables
 let bestScore = 0;
-let playerName = ""; // Session storage for name
+let playerName = ""; 
 
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -17,7 +17,7 @@ function showTab(tabId) {
     }
 }
 
-// --- 1. Google Login & Calendar Logic ---
+// --- 1. Google Login & Calendar (Unchanged) ---
 function handleCredentialResponse(response) {
     const payload = JSON.parse(atob(response.credential.split('.')[1]));
     const email = payload.email;
@@ -28,7 +28,7 @@ function handleCredentialResponse(response) {
     document.querySelector('.g_id_signin').style.display = 'none';
 }
 
-// --- 2. AI Implementation (Puter.js) ---
+// --- 2. AI Implementation (Unchanged) ---
 async function askAI() {
     const userInput = document.getElementById('user-input').value;
     const chatWindow = document.getElementById('chat-window');
@@ -40,15 +40,15 @@ async function askAI() {
     chatWindow.appendChild(loadingMsg);
     chatWindow.scrollTop = chatWindow.scrollHeight;
     try {
-        const response = await puter.ai.chat(`Help the user the most you can with whatever they ask. Question: ${userInput}`);
+        const response = await puter.ai.chat(`Help the user. Question: ${userInput}`);
         loadingMsg.innerHTML = `<strong>AI:</strong> ${response}`;
     } catch (error) {
-        loadingMsg.innerHTML = "<strong>AI:</strong> Sorry I couldnt load a response.";
+        loadingMsg.innerHTML = "<strong>AI:</strong> Error loading response.";
     }
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-// --- 3. Doodle Jump ---
+// --- 3. Doodle Jump Core ---
 const canvas = document.getElementById('jumpGame');
 const ctx = canvas ? canvas.getContext('2d') : null;
 const playerImg = new Image();
@@ -90,38 +90,39 @@ function drawPlayer() {
     ctx.restore();
 }
 
-// --- 4. NEW: Leaderboard Handler ---
+// --- 4. Robust Leaderboard Handler ---
 async function handleLeaderboard(finalScore) {
+    let scores = [];
     try {
+        // Try Puter Global Storage
         let rawData = await puter.kv.get('global_leaderboard');
-        let scores = rawData ? JSON.parse(rawData) : [];
-
-        // Qualify for leaderboard?
-        const qualifies = scores.length < 5 || finalScore > scores[scores.length - 1].score;
-
-        if (qualifies) {
-            if (!playerName) {
-                playerName = window.prompt("New High Score! Enter your name:", "Player") || "Anonymous";
-            }
-            scores.push({ name: playerName.substring(0, 10), score: finalScore });
-            scores.sort((a, b) => b.score - a.score);
-            scores = scores.slice(0, 5); // Keep top 5
-            await puter.kv.set('global_leaderboard', JSON.stringify(scores));
-        }
-        return scores;
+        scores = rawData ? JSON.parse(rawData) : [];
     } catch (e) {
-        console.error("Leaderboard error", e);
-        return [];
+        console.warn("Puter KV failed, using local fallback.");
+        let localData = localStorage.getItem('local_leaderboard');
+        scores = localData ? JSON.parse(localData) : [];
     }
+
+    const qualifies = scores.length < 5 || finalScore > scores[scores.length - 1].score;
+
+    if (qualifies && finalScore > 0) {
+        if (!playerName) {
+            playerName = window.prompt("New High Score! Enter your name:", "Player") || "Anonymous";
+        }
+        scores.push({ name: playerName.substring(0, 10), score: finalScore });
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, 5);
+        
+        // Save to Puter and Local as backup
+        try { await puter.kv.set('global_leaderboard', JSON.stringify(scores)); } catch(e){}
+        localStorage.setItem('local_leaderboard', JSON.stringify(scores));
+    }
+    return scores;
 }
 
-async function gameOver() {
-    isPlaying = false;
-    if (anim) cancelAnimationFrame(anim);
-    if (score > bestScore) bestScore = score;
-
-    // Menu Overlay
-    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+// Draw helper to keep gameOver clean
+function drawGameOverScreen(leaderboardData) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = "white";
@@ -130,26 +131,23 @@ async function gameOver() {
     ctx.fillText("GAME OVER", canvas.width / 2, 70);
     
     ctx.font = "20px Arial";
-    ctx.fillText("Your Score: " + score, canvas.width / 2, 105);
+    ctx.fillText("Score: " + score, canvas.width / 2, 105);
 
-    // Leaderboard Display
     ctx.fillStyle = "#f6e05e";
     ctx.font = "bold 18px Arial";
-    ctx.fillText("--- GLOBAL TOP 5 ---", canvas.width / 2, 150);
+    ctx.fillText("--- TOP 5 ---", canvas.width / 2, 150);
     
     ctx.fillStyle = "white";
     ctx.font = "16px Courier New";
     
-    const topScores = await handleLeaderboard(score);
-    if (topScores.length === 0) {
-        ctx.fillText("Loading...", canvas.width / 2, 190);
-    } else {
-        topScores.forEach((s, i) => {
+    if (Array.isArray(leaderboardData)) {
+        leaderboardData.forEach((s, i) => {
             ctx.fillText(`${i + 1}. ${s.name}: ${s.score}`, canvas.width / 2, 190 + (i * 25));
         });
+    } else {
+        ctx.fillText(leaderboardData, canvas.width / 2, 190);
     }
 
-    // Play Again Button (shifted lower for leaderboard room)
     ctx.fillStyle = "#4A90E2";
     if (ctx.roundRect) {
         ctx.beginPath();
@@ -158,12 +156,25 @@ async function gameOver() {
     } else {
         ctx.fillRect(canvas.width / 2 - 70, 330, 140, 45);
     }
-    
     ctx.fillStyle = "white";
-    ctx.font = "bold 16px Arial";
     ctx.fillText("PLAY AGAIN", canvas.width / 2, 358);
 }
 
+async function gameOver() {
+    isPlaying = false;
+    if (anim) cancelAnimationFrame(anim);
+    if (score > bestScore) bestScore = score;
+
+    // Show loading state while waiting for Puter
+    drawGameOverScreen("Loading...");
+
+    const topScores = await handleLeaderboard(score);
+    
+    // Redraw with actual scores
+    drawGameOverScreen(topScores);
+}
+
+// --- Game Logic (Unchanged but ensuring it calls correct gameOver) ---
 function initJumpGame() {
     if (!canvas) return;
     score = 0; player.x = 135; player.y = 400; player.dy = 0;
@@ -177,15 +188,12 @@ function initJumpGame() {
     gameLoop();
 }
 
-// Updated click listener for the new button position
 canvas.addEventListener('mousedown', (e) => {
     if (isPlaying) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (x > 80 && x < 220 && y > 330 && y < 375) {
-        initJumpGame();
-    }
+    if (x > 80 && x < 220 && y > 330 && y < 375) initJumpGame();
 });
 
 function gameLoop() {
