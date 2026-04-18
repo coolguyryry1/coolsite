@@ -101,3 +101,15 @@ input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
 .tab-content.active {
     display: block; /* Only show the active one */
 }
+
+canvas {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 300px;
+    /* --- Add these for Mobile --- */
+    touch-action: none; 
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
