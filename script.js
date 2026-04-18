@@ -100,7 +100,7 @@ function generatePlatform(yStart) {
         x: Math.random() * (canvas.width - 50), 
         y: yStart, w: 50, h: 12, 
         type: Math.random() < 0.15 ? 'spring' : 'normal', 
-        rocket: Math.random() < 0.05 
+        rocket: Math.random() < 0.01 // Rocket is now much rarer (1%)
     };
 }
 
@@ -202,7 +202,19 @@ function gameLoop() {
         }
         ctx.fill();
 
-        if (p.type === 'spring') { ctx.fillStyle = "#a0aec0"; ctx.fillRect(p.x + 15, p.y - 8, 20, 8); }
+        // Draw Spring
+        if (p.type === 'spring') { 
+            ctx.fillStyle = "#a0aec0"; 
+            ctx.fillRect(p.x + 15, p.y - 8, 20, 8); 
+        }
+
+        // Draw Rocket (Visual fix)
+        if (p.rocket) {
+            ctx.fillStyle = "#ed8936"; // Orange rocket body
+            ctx.fillRect(p.x + 20, p.y - 15, 10, 15);
+            ctx.fillStyle = "#f6e05e"; // Yellow flame
+            ctx.fillRect(p.x + 22, p.y - 5, 6, 5);
+        }
         
         if (player.dy > 0 && 
             hitboxX < p.x + p.w && 
@@ -210,9 +222,16 @@ function gameLoop() {
             player.y + player.h > p.y && 
             player.y + player.h < p.y + p.h + 10) {
             
-            if (p.rocket) { player.dy = player.jump * 2.8; p.rocket = false; }
-            else if (p.type === 'spring') player.dy = player.jump * 1.6;
-            else player.dy = player.jump;
+            if (p.rocket) { 
+                player.dy = -50; // Super high rocket boost
+                p.rocket = false; 
+            }
+            else if (p.type === 'spring') {
+                player.dy = -30; // Spring takes you high like the real game
+            }
+            else {
+                player.dy = player.jump;
+            }
         }
     });
 
