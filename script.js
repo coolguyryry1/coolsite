@@ -1,47 +1,29 @@
 function showTab(tabId) {
-    // Hide all tab content
+    // 1. Standard Tab Switching
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
 
-    // Show the selected tab
     const activeTab = document.getElementById(tabId);
     if (activeTab) {
         activeTab.classList.add('active');
     }
 
-    // Add active class to the clicked button
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
     }
     
-    // WIDGET RE-LOADER
-    if (tabId === 'barca') {
-        const container = document.getElementById('widget-f7zrmo3f2vrk');
-        if (container) {
-            container.innerHTML = ''; // Clear it
-            const script = document.createElement('script');
-            script.src = "https://widgets.scoreaxis.com/api/football/team-info/62321b15adaf4b2bd73de814?widgetId=f7zrmo3f2vrk&lang=en&statsBlock=1&playersBlock=1&matchesBlock=1&links=1&font=heebo&fontSize=14&rowDensity=100&widgetWidth=auto&widgetHeight=auto&bodyColor=%23ffffff&textColor=%23141416&linkColor=%23141416&borderColor=%23ecf1f7&tabColor=%23f3f8fd";
-            script.async = true;
-            
-            const linkDiv = document.createElement('div');
-            linkDiv.className = "widget-main-link";
-            linkDiv.style = "padding: 6px 12px; font-weight: 500;";
-            linkDiv.innerHTML = 'Live data by <a href="https://www.scoreaxis.com/" style="color: inherit;">Scoreaxis</a>';
-            
-            container.appendChild(script);
-            container.appendChild(linkDiv);
-        }
-    }
+    // 2. Simple "Wake Up" - No forcing/reloading scripts
+    // This tells the browser to recalculate layouts for any visible widgets
+    setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, 50);
 
-    window.dispatchEvent(new Event('resize'));
-
-    // Stop the game if we leave the game tab
+    // 3. Stop the game if we leave the game tab
     if (tabId !== 'game') {
         isPlaying = false;
         if (anim) cancelAnimationFrame(anim);
