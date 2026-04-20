@@ -5,6 +5,7 @@ let moveLeft = false;
 let moveRight = false;
 let userEmail = null;
 let userID = null; 
+let chatHistory = []; // Added for AI memory
 
 // Naming Logic Variables
 let isNaming = false;
@@ -58,7 +59,6 @@ async function handleCredentialResponse(response) {
     const iframe = document.getElementById('google-calendar-iframe');
     iframe.src = `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(userEmail)}&ctz=America%2FNew_York`;
 
-    // Sync Spotify link from cloud now that we have userID
     await loadUserMusic();
 }
 
@@ -97,18 +97,38 @@ async function updateUserMusic() {
 
 // --- 4. AI Assistant ---
 async function askAI() {
-    const userInput = document.getElementById('user-input').value;
+    const userInputField = document.getElementById('user-input');
+    const userInput = userInputField.value.trim();
     const chatWindow = document.getElementById('chat-window');
+    
     if (!userInput) return;
+
     chatWindow.innerHTML += `<p><strong>You:</strong> ${userInput}</p>`;
-    document.getElementById('user-input').value = "";
+    
+    // Add User message to history
+    chatHistory.push({role: "user", content: userInput});
+    
+    userInputField.value = "";
+    
     const loadingMsg = document.createElement("p");
     loadingMsg.innerHTML = "<strong>AI:</strong> Thinking...";
     chatWindow.appendChild(loadingMsg);
     chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    // Sliding Window: Keep the last 12 messages
+    if (chatHistory.length > 12) {
+        chatHistory = chatHistory.slice(-12);
+    }
+
     try {
-        const response = await puter.ai.chat(userInput);
+        // Send history to AI
+        const response = await puter.ai.chat(chatHistory);
+        
         loadingMsg.innerHTML = `<strong>AI:</strong> ${response}`;
+        
+        // Add AI response to history
+        chatHistory.push({role: "assistant", content: response.toString()});
+        
     } catch (error) {
         loadingMsg.innerHTML = "<strong>AI:</strong> Error loading response.";
     }
@@ -169,7 +189,6 @@ function drawNamingScreen() {
     ctx.font = "16px Arial";
     ctx.fillText("Type your name:", canvas.width / 2, 160);
 
-    // Text Input Box
     ctx.strokeStyle = "#4A90E2";
     ctx.lineWidth = 2;
     ctx.strokeRect(canvas.width / 2 - 80, 180, 160, 40);
@@ -179,7 +198,6 @@ function drawNamingScreen() {
     let cursor = (Date.now() % 1000 < 500) ? "_" : "";
     ctx.fillText(inputName + cursor, canvas.width / 2, 208);
 
-    // Submit Button
     ctx.fillStyle = "#48bb78";
     if (ctx.roundRect) {
         ctx.beginPath();
@@ -266,7 +284,6 @@ async function gameOver() {
     if (anim) cancelAnimationFrame(anim);
     if (score > bestScore) bestScore = score;
 
-    // Check if we need to ask for a name (only if not logged in/no name saved)
     if (!playerName || playerName === "Anonymous") {
         isNaming = true;
         inputName = "";
@@ -403,11 +420,8 @@ canvas.addEventListener('mousedown', (e) => {
     const y = e.clientY - rect.top;
 
     if (isNaming) {
-        // Trigger mobile keyboard for naming
         const ghostInput = document.getElementById('mobile-keyboard-trigger');
         if (ghostInput) ghostInput.focus();
-
-        // Check Submit Button Click
         if (x > canvas.width / 2 - 50 && x < canvas.width / 2 + 50 && y > 240 && y < 280) {
             if (inputName.length > 0) finishNaming();
         }
@@ -419,7 +433,13 @@ canvas.addEventListener('mousedown', (e) => {
     }
 });
 
-// Mobile Keyboard Helper
+// Added Enter key listener for AI input
+document.getElementById('user-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        askAI();
+    }
+});
+
 const ghostInput = document.getElementById('mobile-keyboard-trigger');
 if (ghostInput) {
     ghostInput.addEventListener('input', (e) => {
