@@ -53,6 +53,9 @@ async function handleCredentialResponse(response) {
     if (profileDiv && avatarImg) {
         profileDiv.style.display = 'block';
         avatarImg.src = payload.picture;
+        // Make avatar clickable for settings
+        avatarImg.style.cursor = "pointer";
+        avatarImg.onclick = openSettings;
     }
 
     document.getElementById('user-email').innerText = userEmail;
@@ -98,7 +101,6 @@ async function updateUserMusic() {
 
 // --- 4. AI Assistant ---
 async function askAI() {
-    // If already thinking, don't allow a new prompt
     if (isGenerating) return;
 
     const userInputField = document.getElementById('user-input');
@@ -107,12 +109,9 @@ async function askAI() {
     
     if (!userInput) return;
 
-    // Set flag to true
     isGenerating = true;
 
     chatWindow.innerHTML += `<p><strong>You:</strong> ${userInput}</p>`;
-    
-    // Add User message to history
     chatHistory.push({role: "user", content: userInput});
     
     userInputField.value = "";
@@ -122,37 +121,75 @@ async function askAI() {
     chatWindow.appendChild(loadingMsg);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 
-    // Sliding Window: Keep the last 12 messages
     if (chatHistory.length > 12) {
         chatHistory = chatHistory.slice(-12);
     }
 
     try {
-        // Send history to AI
         const response = await puter.ai.chat(chatHistory);
-        
         loadingMsg.innerHTML = `<strong>AI:</strong> ${response}`;
-        
-        // Add AI response to history
         chatHistory.push({role: "assistant", content: response.toString()});
-        
     } catch (error) {
         loadingMsg.innerHTML = "<strong>AI:</strong> Error loading response.";
     } finally {
-        // Reset flag so user can type again
         isGenerating = false;
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 }
 
-// Update the listener at the bottom of your file to this:
-document.getElementById('user-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !isGenerating) {
-        askAI();
+// --- 5. Settings, Theme, & Notifications ---
+function openSettings() {
+    document.getElementById('settings-modal').style.display = 'block';
+    if (userEmail) {
+        document.getElementById('settings-email').innerText = userEmail;
     }
-});
+}
 
-// --- 5. Doodle Jump Core & Custom UI ---
+function closeSettings() {
+    document.getElementById('settings-modal').style.display = 'none';
+}
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-theme');
+    const btn = document.getElementById('dark-mode-btn');
+    if (btn) btn.innerText = isDark ? "On" : "Off";
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+
+function handleSignOut() {
+    userEmail = null;
+    userID = null;
+    playerName = "Anonymous";
+    
+    document.getElementById('user-profile').style.display = 'none';
+    document.querySelector('.g_id_signin').style.display = 'block';
+    document.getElementById('calendar-container').style.display = 'none';
+    
+    closeSettings();
+    showToast("Signed out successfully");
+}
+
+function showToast(message, duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    
+    toast.innerHTML = `
+        <span class="toast-close" onclick="this.parentElement.remove()">✕</span>
+        <div>${message}</div>
+        <div class="toast-progress" style="animation: progressAnim ${duration}ms linear forwards"></div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        if(toast.parentElement) toast.remove();
+    }, duration);
+}
+
+// --- 6. Doodle Jump Core & Custom UI ---
 const canvas = document.getElementById('jumpGame');
 const ctx = canvas ? canvas.getContext('2d') : null;
 const playerImg = new Image();
@@ -450,9 +487,9 @@ canvas.addEventListener('mousedown', (e) => {
     }
 });
 
-// Added Enter key listener for AI input
+// Added Enter key listener for AI input (with isGenerating check)
 document.getElementById('user-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isGenerating) {
         askAI();
     }
 });
@@ -462,6 +499,11 @@ if (ghostInput) {
     ghostInput.addEventListener('input', (e) => {
         if (isNaming) inputName = e.target.value.substring(0, MAX_NAME_LENGTH);
     });
+}
+
+// Check for saved theme on load
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark-theme');
 }
 
 // Initial Run
