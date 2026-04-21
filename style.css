@@ -330,3 +330,25 @@ a:hover {
     text-decoration: none !important;
     display: inline-block;
 }
+
+/* THE ULTIMATE FIX FOR ROGUE UNDERLINES */
+
+/* 1. Force-remove underlines from everything by default */
+* {
+    text-decoration: none !important;
+}
+
+/* 2. Only allow underlines for actual links inside cards or specific text */
+a, .card a, #powered-by-link {
+    text-decoration: none !important;
+}
+
+/* 3. Only show underline when the mouse is SPECIFICALLY over a link */
+a:hover, #powered-by-link:hover {
+    text-decoration: underline !important;
+}
+
+/* 4. Ensure navigation and buttons are NEVER underlined */
+.nav-btn, .btn, .nav-btn *, .btn * {
+    text-decoration: none !important;
+}
