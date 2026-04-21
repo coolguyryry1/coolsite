@@ -352,3 +352,31 @@ a:hover, #powered-by-link:hover {
 .nav-btn, .btn, .nav-btn *, .btn * {
     text-decoration: none !important;
 }
+
+/* Cage the Google Sign-In button */
+.account-zone {
+    position: relative;
+    overflow: hidden; /* Prevents invisible links from leaking out */
+    max-height: 40px;
+}
+
+/* Cage the Barca Widget */
+#widget-container {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* The 'Nuclear' Fix: If an invisible link is covering the page, 
+   this forces it to have a size of 0 unless it's inside a valid container */
+body > a {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Ensure your container is the only thing taking up space */
+.container {
+    position: relative;
+    z-index: 10; /* Keeps your content ABOVE any rogue background links */
+}
