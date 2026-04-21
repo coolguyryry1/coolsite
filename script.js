@@ -47,7 +47,6 @@ function toggleMenu() {
 async function handleCredentialResponse(response) {
     const payload = JSON.parse(atob(response.credential.split('.')[1]));
     
-    // Save session to localStorage
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('savedUser', JSON.stringify({
         email: payload.email,
@@ -98,7 +97,7 @@ function handleSignOut() {
     userEmail = null; 
     userID = null; 
     playerName = "Anonymous";
-    location.reload(); // Hard reset for security/cleanliness
+    location.reload();
 }
 
 // --- 3. Spotify Logic ---
@@ -112,7 +111,6 @@ async function loadUserMusic() {
         const savedLink = await puter.kv.get(key);
         let finalLink = savedLink || defaultLink;
         
-        // Ensure it's an embed link
         if(finalLink.includes("spotify.com") && !finalLink.includes("/embed")) {
             finalLink = finalLink.replace("spotify.com/", "spotify.com/embed/");
         }
@@ -149,7 +147,7 @@ async function askAI() {
     loadingMsg.innerHTML = "<strong>AI:</strong> Thinking...";
     chatWindow.appendChild(loadingMsg);
     chatWindow.scrollTop = chatWindow.scrollHeight;
-    if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+    
     try {
         const response = await puter.ai.chat(chatHistory);
         loadingMsg.innerHTML = `<strong>AI:</strong> ${response}`;
@@ -177,29 +175,15 @@ function toggleDarkMode() {
 function renderBarcaWidget() {
     const container = document.getElementById('widget-container');
     if (!container) return;
-
     const isDark = document.body.classList.contains('dark-theme');
     const themeValue = isDark ? 'dark' : 'light';
-
     container.innerHTML = `
-        <div data-widget-type="entityScores" 
-             data-entity-type="team" 
-             data-entity-id="132" 
-             data-lang="en" 
-             data-widget-id="35cb5715-3e5e-4277-a2f6-3c0d477a56fd" 
-             data-theme="${themeValue}">
-        </div>
+        <div data-widget-type="entityScores" data-entity-type="team" data-entity-id="132" data-lang="en" data-widget-id="35cb5715-3e5e-4277-a2f6-3c0d477a56fd" data-theme="${themeValue}"></div>
         <div id="powered-by" style="font-size: 10px; margin-top: 5px; text-align: center; opacity: 0.7;">
             Powered by <a id="powered-by-link" href="https://www.365scores.com" target="_blank" style="color: var(--primary-color);">365Scores.com</a>
         </div>
     `;
-
-    const oldScript = document.querySelector('script[src*="365scores.com/main.js"]');
-    if (oldScript) oldScript.remove();
-
-    const newScript = document.createElement('script');
-    newScript.src = "https://widgets.365scores.com/main.js";
-    container.appendChild(newScript);
+    if (window.three65scores) window.three65scores.render();
 }
 
 function showToast(message, type = "success", duration = 3000) {
@@ -215,8 +199,7 @@ function showToast(message, type = "success", duration = 3000) {
 // --- 6. Mobile & FullScreen Logic ---
 function toggleFullScreen() {
     const container = document.getElementById('game-container');
-    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
-
+    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
     if (!isFull) {
         if (container.requestFullscreen) container.requestFullscreen();
         else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
@@ -228,19 +211,12 @@ function toggleFullScreen() {
 function handleResize() {
     const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
     if (isFull) {
-        const ratio = window.innerWidth / window.innerHeight;
-        if (ratio < 0.8) { 
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        } else { 
-            canvas.width = 300;
-            canvas.height = 500;
-        }
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     } else {
         canvas.width = 300;
         canvas.height = 500;
     }
-    if (isNaming) drawNamingScreen();
 }
 
 window.addEventListener('resize', handleResize);
@@ -266,7 +242,7 @@ let boss = { active: false, hp: 10, x: 100, y: -100, w: 100, h: 80, dx: 2, lastS
 function generatePlatform(yStart) {
     return { 
         x: Math.random() * (canvas.width - 60), 
-        y: yStart, w: 60, h: 12, 
+        y: yStart, w: 60, h: 14, 
         type: Math.random() < 0.15 ? 'spring' : 'normal', 
         rocket: Math.random() < 0.01 
     };
@@ -274,6 +250,14 @@ function generatePlatform(yStart) {
 
 function shoot() {
     bullets.push({ x: player.x + player.w / 2 - 3, y: player.y, w: 6, h: 12 });
+}
+
+// Helper for Rounded Platforms
+function drawRoundedRect(x, y, w, h, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    ctx.fill();
 }
 
 function drawPlayer() {
@@ -367,6 +351,7 @@ function drawGameOverScreen(leaderboardData) {
 
 function gameOver() {
     isPlaying = false;
+    moveLeft = false; moveRight = false; // Reset mobile movement
     if (anim) cancelAnimationFrame(anim);
     if (score > bestScore) bestScore = score;
     if (!playerName || playerName === "Anonymous") {
@@ -388,7 +373,7 @@ function initJumpGame() {
     platforms = []; bullets = []; bossBullets = [];
     boss.active = false; boss.hp = 10; boss.y = -100; boss.defeated = false;
     document.getElementById('jumpScore').innerText = score;
-    platforms.push({ x: canvas.width/2 - 25, y: 450, w: 50, h: 12, type: 'normal', rocket: false });
+    platforms.push({ x: canvas.width/2 - 25, y: 450, w: 50, h: 14, type: 'normal', rocket: false });
     for (let i = 0; i < 6; i++) platforms.push(generatePlatform(i * 80));
     if (anim) cancelAnimationFrame(anim);
     isPlaying = true;
@@ -452,10 +437,16 @@ function gameLoop() {
     }
 
     platforms.forEach(p => {
-        ctx.fillStyle = p.type === 'spring' ? "#48bb78" : "#68d391";
-        ctx.fillRect(p.x, p.y, p.w, p.h);
-        if (p.type === 'spring') { ctx.fillStyle = "#a0aec0"; ctx.fillRect(p.x + 15, p.y - 8, 20, 8); }
-        if (p.rocket) { ctx.fillStyle = "#ed8936"; ctx.fillRect(p.x + 20, p.y - 15, 10, 15); }
+        let color = p.type === 'spring' ? "#48bb78" : "#68d391";
+        drawRoundedRect(p.x, p.y, p.w, p.h, 6, color);
+        
+        if (p.type === 'spring') { 
+            drawRoundedRect(p.x + 15, p.y - 8, 20, 8, 3, "#a0aec0");
+        }
+        if (p.rocket) { 
+            drawRoundedRect(p.x + 20, p.y - 15, 10, 15, 2, "#ed8936");
+        }
+        
         if (player.dy > 0 && player.x < p.x + p.w && player.x + player.w > p.x && 
             player.y + player.h > p.y && player.y + player.h < p.y + p.h + 10) {
             if (p.rocket) { player.dy = -50; p.rocket = false; }
@@ -483,6 +474,19 @@ window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') canShoot = true;
 });
 
+// Mobile Movement & Clicks
+canvas.addEventListener('touchstart', (e) => {
+    if (!isPlaying) return;
+    const touchX = e.touches[0].clientX;
+    const screenMid = window.innerWidth / 2;
+    if (touchX < screenMid) { moveLeft = true; moveRight = false; } 
+    else { moveRight = true; moveLeft = false; }
+}, {passive: true});
+
+canvas.addEventListener('touchend', () => {
+    moveLeft = false; moveRight = false;
+});
+
 canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
@@ -499,6 +503,15 @@ canvas.addEventListener('mousedown', (e) => {
     if (!isPlaying && x > canvas.width/2 - 70 && x < canvas.width/2 + 70 && y > 380 && y < 425) initJumpGame();
 });
 
+// Mobile Shoot Button
+const shootBtn = document.getElementById('mobile-shoot-btn');
+if(shootBtn) {
+    shootBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if(isPlaying) shoot();
+    });
+}
+
 const ghostInput = document.getElementById('mobile-keyboard-trigger');
 if (ghostInput) {
     ghostInput.addEventListener('input', (e) => { if (isNaming) inputName = e.target.value.substring(0, MAX_NAME_LENGTH); });
@@ -507,23 +520,18 @@ if (ghostInput) {
     });
 }
 
-// --- Initializing App State ---
-// Default to Dark Mode if no preference is set, or respect existing 'dark' setting
+// Initializing App State
 const currentTheme = localStorage.getItem('theme');
 if (currentTheme === 'dark' || currentTheme === null) {
     document.body.classList.add('dark-theme');
     localStorage.setItem('theme', 'dark');
-    const btn = document.getElementById('dark-mode-btn');
-    if (btn) btn.innerText = "On";
 }
 
-// Check for Saved Session
 const savedUser = localStorage.getItem('savedUser');
 if (localStorage.getItem('isLoggedIn') === 'true' && savedUser) {
     setupUserSession(JSON.parse(savedUser));
 } else {
-    loadUserMusic(); // Load default music if not logged in
+    loadUserMusic();
 }
 
-// Initial render of the Barca widget
 renderBarcaWidget();
