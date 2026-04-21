@@ -297,3 +297,16 @@ canvas {
     /* Keep Title and Avatar small to fit everything */
     h1 { font-size: 1.2rem; margin: 0; }
 }
+
+#game-container:fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #000; /* Or your game's sky color */
+}
+
+#jumpGame {
+    /* Prevents the browser from trying to "smooth" the pixels */
+    image-rendering: pixelated; 
+    background-color: #ebf8ff; /* Match your game sky */
+}
