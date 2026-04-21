@@ -12,7 +12,7 @@
 </head>
 <body>
 
-    <nav class="toolbar">
+    <nav class="toolbar" style="display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 15px;">
         <button class="menu-toggle" onclick="toggleMenu()">☰ Menu</button>
 
         <div class="nav-links" id="mobile-menu">
@@ -22,16 +22,16 @@
             <button class="nav-btn" onclick="showTab('ai')">AI</button>
         </div>
 
-        <div class="account-zone" style="position: relative; z-index: 1001;">
+        <div class="account-zone" style="position: relative; z-index: 1001; display: flex; align-items: center; height: 100%;">
             <div id="g_id_onload"
                  data-client_id="395838452484-29r7mrhrb50og9elibotn4e3051fmi03.apps.googleusercontent.com"
                  data-callback="handleCredentialResponse">
             </div>
-            <div style="display: inline-block;">
+            <div style="display: flex; align-items: center;">
                 <div class="g_id_signin" data-type="icon" data-shape="circle" data-theme="outline"></div>
             </div>
-            <div id="user-profile" style="display: none;">
-                <img id="user-avatar" src="" alt="User" title="Profile">
+            <div id="user-profile" style="display: none; line-height: 0;">
+                <img id="user-avatar" src="" alt="User" title="Profile" style="width: 38px; height: 38px; border-radius: 50%; border: 2px solid #4A90E2; object-fit: cover;">
             </div>
         </div>
     </nav>
