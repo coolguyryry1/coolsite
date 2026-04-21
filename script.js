@@ -459,3 +459,16 @@ if (ghostInput) ghostInput.addEventListener('input', (e) => { if (isNaming) inpu
 if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
 
 loadUserMusic();
+
+function toggleMenu() {
+    const menu = document.getElementById('mobile-menu');
+    menu.classList.toggle('open');
+}
+
+// Close the menu automatically when you click a tab
+const originalShowTab = showTab;
+showTab = function(tabId) {
+    originalShowTab(tabId);
+    const menu = document.getElementById('mobile-menu');
+    if (menu) menu.classList.remove('open');
+};
